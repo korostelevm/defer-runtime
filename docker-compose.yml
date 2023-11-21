@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  defer-runtime:
+    environment:
+      - REFRESH_CACHE=1
+    build: .
+    ports:
+      - "9000:8080"
+    volumes:
+      - ./runtime:/var/task/runtime
+      - ./lambda:/var/task/lambda
