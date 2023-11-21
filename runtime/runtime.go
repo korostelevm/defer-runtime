@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"regexp"
+	"strings"
 )
 
 func read_file(path string) []string {
@@ -32,29 +34,56 @@ func read_file(path string) []string {
 	return contents
 }
 
-func get_process_stats(procfolder string) []string {
-	contents := read_file(procfolder + "/stat")
-	return contents
+func get_process_status(procfolder string) map[string]string {
+	contents := read_file(procfolder + "/status")
+	status := make(map[string]string)
+	for _, line := range contents {
+		// split the line into key and value
+		parts := strings.Split(line, ":")
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			status[key] = value
+		}
+	}
+
+	return status
 
 }
 
 func main() {
 	// list all files in current directory
-	files, err := os.ReadDir("/proc")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// enc := json.NewEncoder(os.Stdout)
+	for true {
 
-	for _, file := range files {
-		process, _ := regexp.MatchString(`^\d+$`, file.Name())
-		if process {
-			path := "/proc/" + file.Name()
-			fmt.Println("process", file.Name())
-			status := get_process_status(path)
-			fmt.Println(status)
-
+		files, err := os.ReadDir("/proc")
+		if err != nil {
+			log.Fatal(err)
+		}
+		// processes := make(map[string]map[string]string)
+		processes := []string{}
+		// for true {
+		for _, file := range files {
+			process, _ := regexp.MatchString(`^\d+$`, file.Name())
+			if process {
+				processes = append(processes, file.Name())
+			}
 		}
 
+		procs := make(map[string]map[string]string)
+		for _, process := range processes {
+			path := "/proc/" + process
+			status := get_process_status(path)
+			// fmt.Println(file.Name(), status["Name"])
+			procs[status["Pid"]] = map[string]string{
+				"Name": status["Name"],
+				"Pid":  status["Pid"],
+			}
+		}
+
+		j, _ := json.MarshalIndent(procs, "", "  ")
+		fmt.Println("\033[2J")
+		println(string(j))
 	}
 
 }
